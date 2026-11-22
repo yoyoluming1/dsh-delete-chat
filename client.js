@@ -13,6 +13,7 @@ const zh = {
   failed: '删除失败：{message}',
   opened: '已创建新会话',
   unavailable: 'Host 插件未启用，删除命令不可用。',
+  created: '新会话已创建（{id}），但会话列表还没刷新出来；刷新页面后可以在列表里打开它。',
 }
 
 const en = {
@@ -26,6 +27,7 @@ const en = {
   failed: 'Delete failed: {message}',
   opened: 'New conversation created',
   unavailable: 'The Host plugin is not active, so the delete command is unavailable.',
+  created: 'The new conversation was created ({id}) but has not reached the list yet; reload the page and open it from there.',
 }
 
 window.__ModuleLoader__.load({
@@ -44,10 +46,35 @@ window.__ModuleLoader__.load({
       if (execution === undefined) throw new Error(t('unavailable'))
       const outcome = execution.result ?? execution
       if (outcome?.kind === 'error') throw new Error(outcome.text ?? 'delete failed')
-      // The Host flushed the new Session log before settling the command, so a
-      // resume by id succeeds immediately; the original conversation is untouched.
-      ctx.uiWorkspace.openSession(newId)
-      return newId
+      // The Host stored the new Session before settling the command, but the
+      // client only knows sessions from its list snapshot. Pull the list once,
+      // then open the row; a cold Session that the list still lacks is reported
+      // instead of raising an "unknown session" retention error.
+      await refreshSessions(ctx)
+      if (await waitForSession(ctx, newId)) {
+        ctx.uiWorkspace.openSession(newId)
+        return { id: newId, opened: true }
+      }
+      return { id: newId, opened: false }
+    }
+
+    /** Refresh the client session list; older services may not expose it. */
+    async function refreshSessions(ctx) {
+      try {
+        if (typeof ctx.sessions.refresh === 'function') await ctx.sessions.refresh()
+      } catch {
+        // A failed refresh still leaves the wait below to try the current list.
+      }
+    }
+
+    /** Wait until the Host list carries the new session id. */
+    async function waitForSession(ctx, sessionId) {
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const list = ctx.sessions.list?.getSnapshot?.()
+        if (list?.byId?.[sessionId] !== undefined) return true
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+      return false
     }
 
     /** Lowercase uuid v4 without Node's crypto dependency. */
@@ -112,12 +139,18 @@ window.__ModuleLoader__.load({
           const [open, setOpen] = React.useState(false)
           const [busy, setBusy] = React.useState(false)
           const [error, setError] = React.useState(null)
+          const [note, setNote] = React.useState(null)
           const submit = async (mode) => {
             setBusy(true)
             setError(null)
+            setNote(null)
             try {
-              await runDelete(ctx, t, sessionId, mode, seq)
-              setOpen(false)
+              const result = await runDelete(ctx, t, sessionId, mode, seq)
+              if (result.opened) {
+                setOpen(false)
+              } else {
+                setNote(t('created').replace('{id}', result.id))
+              }
             } catch (reason) {
               setError(String(reason?.message ?? reason))
             } finally {
@@ -167,6 +200,10 @@ window.__ModuleLoader__.load({
               role: 'alert',
               style: { color: 'var(--dsw-alias-state-error-primary, #c0392b)', marginBottom: '8px', lineHeight: '18px' },
             }, t('failed').replace('{message}', error)),
+            note === null ? null : h('div', {
+              role: 'status',
+              style: { color: 'var(--dsw-alias-label-secondary, inherit)', marginBottom: '8px', lineHeight: '18px' },
+            }, note),
             h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
               h(ActionButton, { onClick: () => { void submit('keep-later') }, disabled: busy }, t('onlyTurn')),
               h(ActionButton, { onClick: () => { void submit('cut') }, disabled: busy, tone: 'danger' }, t('cutAll')),
