@@ -267,9 +267,17 @@ async function launch(ctx, source, sessionId, seed, options = {}) {
   // working directory alone. The API controller attaches every Session it
   // creates (and every fork it publishes); a Session created straight through
   // the agent factory must do the same or it never reaches the sidebar.
-  const workspace = ctx.get('workspaceRegistry')?.list?.()
-    ?.find(candidate => candidate.sessionIds?.includes(source.id))
+  const registry = ctx.get('workspaceRegistry')
+  const workspace = registry?.list?.()?.find(candidate => candidate.sessionIds?.includes(source.id))
   if (workspace !== undefined) await workspace.attachSession(sessionId)
+  // The trimmed copy replaces the source in the list. Archiving is a
+  // convenience, so a refusal (for example an unexplainably active Session)
+  // must not turn a successful deletion into a failure.
+  try {
+    await registry?.archiveSession?.(source.id, { stopActivity: true })
+  } catch {
+    // Keep the deletion result; the source stays visible instead.
+  }
 }
 
 /**

@@ -53,13 +53,6 @@ window.__ModuleLoader__.load({
       await refreshSessions(ctx)
       if (await waitForSession(ctx, newId)) {
         ctx.uiWorkspace.openSession(newId)
-        // The trimmed conversation replaces the source in the list; the source
-        // stays recoverable through "unarchive".
-        try {
-          await ctx.uiWorkspace.archiveSession(sessionId, { stopActivity: true })
-        } catch {
-          // Archiving is a convenience; a failure must not undo the deletion.
-        }
         return { id: newId, opened: true }
       }
       return { id: newId, opened: false }
