@@ -70,9 +70,14 @@ DSH format change may need a plugin update.
   live compaction transaction still references. Dropping such a reference would
   silently resurrect replaced or compacted history; use *delete this turn and
   everything after* instead.
-- Sessions that are themselves forks (`isSeeded`) are refused by both modes: their
-  inherited-cut marker cannot be carried into a rebuilt log safely.
+- Sessions that are themselves forks (created by *branch into a new
+  conversation*, or by a previous truncation) can still be **truncated**, but
+  `keep-later` is refused on that lineage: its inherited-cut marker cannot be
+  carried into a rebuilt log safely.
 - The new conversation gets a new Session id; the old one keeps its id and log.
+- Truncation produces a forked Session: the kept prefix is marked as inherited.
+  You can truncate that result again, but middle deletion stays unavailable on
+  that lineage.
 - After a middle deletion, later turn numbers shift down by one (turn 351 becomes
   350). This is required by the on-disk format.
 - Truncation removes every record after the cut, including the latest title,

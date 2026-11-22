@@ -5,7 +5,9 @@
 - Per-turn **Delete** control in the Chat.
 - *Delete this turn only* keeps the later turns by rebuilding and renumbering the
   event log.
-- *Delete this turn and everything after* truncates through the log tail.
+- *Delete this turn and everything after* truncates through the log tail by
+  forking the kept prefix, so it also works on conversations that were branched
+  earlier.
 - Refuses turns that a later `system/message` replacement or a live compaction
   transaction still references, and refuses forked sessions.
 - Writes the rebuilt log through the persistence backend and reopens it once

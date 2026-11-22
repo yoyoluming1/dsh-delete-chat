@@ -25,8 +25,9 @@ conversation opens automatically after the Host finishes building it.
 ## Limitations
 
 - Whole turns only, not single messages or tool calls.
-- Sessions created by a fork are refused by both modes; the inherited-cut marker
-  cannot survive a rebuild.
+- Conversations that are themselves forks can be truncated; middle deletion is
+  refused on that lineage because the inherited-cut marker cannot survive a
+  rebuild. Truncating also produces a forked conversation.
 - Deleting a middle turn can be refused when a later system-prompt replacement or
   a compaction transaction still references it. Truncating from that turn is
   always available as a fallback.

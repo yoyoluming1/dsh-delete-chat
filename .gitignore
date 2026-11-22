@@ -12,3 +12,5 @@ test/README.md
 # Local GitHub token drop (never commit)
 .token
 test/host-command.test.mjs
+test/scan-sessions.mjs
+test/fork-cut-spike.mjs

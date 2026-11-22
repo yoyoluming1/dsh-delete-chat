@@ -22,7 +22,7 @@
  * @module dsh-delete-chat
  */
 
-import { findTurns, remapEvents, RemapRefusal } from './lib/remap.js'
+import { findTurns, planDeletion, remapEvents, RemapRefusal } from './lib/remap.js'
 
 /** Command name shown in the composer's command menu. */
 const COMMAND = 'delete-chat'
@@ -81,36 +81,46 @@ async function run(ctx, agent, rawInput) {
     return failure('没有加载会话持久化后端，无法创建新会话。/ No session persistence backend is loaded.')
   }
 
-  const { turns } = findTurns(events)
-  const turnNumbers = [...turns.keys()].sort((left, right) => left - right)
-  const deleteTurns = request.mode === 'cut'
-    ? turnNumbers.filter(turn => turn >= target.turn)
-    : [target.turn]
-
+  let seed
+  let seeded = false
+  let inheritedEventCount = 0
   let rebuilt
   try {
-    rebuilt = remapEvents(events, {
-      deleteTurns,
-      header: session.header,
-      newSessionId: request.sessionId,
-    })
+    if (request.mode === 'cut') {
+      // A truncation is exactly a fork through the boundary: the untouched
+      // prefix keeps its turn numbers, its delivery markers stay inherited, and
+      // the official marker makes the persisted log valid even for a Session
+      // that was itself branched.
+      const [range] = planDeletion(events, [target.turn])
+      const boundary = range.startSeq - 1
+      if (boundary < 0) return failure('删除后没有剩余对话内容。/ Nothing would be left after this deletion.')
+      seed = buildForkPrefix(events, boundary)
+      seeded = true
+      inheritedEventCount = boundary + 1
+    } else {
+      rebuilt = remapEvents(events, {
+        deleteTurns: [target.turn],
+        header: session.header,
+        newSessionId: request.sessionId,
+      })
+      seed = rebuilt.events
+      if (!seed.some(event => event.type === 'turn/start')) {
+        return failure('删除后没有剩余对话内容。/ Nothing would be left after this deletion.')
+      }
+    }
   } catch (error) {
     if (error instanceof RemapRefusal) return failure(refusalText(error, request.mode))
     throw error
   }
 
-  if (!rebuilt.events.some(event => event.type === 'turn/start')) {
-    return failure('删除后没有剩余对话内容。/ Nothing would be left after this deletion.')
-  }
-
   try {
-    await persist(ctx, persistence, session, request.sessionId, rebuilt.events)
+    await persist(ctx, persistence, session, request.sessionId, seed, { seeded, inheritedEventCount })
     await verifyStored(persistence, request.sessionId)
   } catch (error) {
     return failure(describe(error))
   }
 
-  const renumbered = rebuilt.report.turnNumbers.renumberedTurns
+  const renumbered = rebuilt?.report.turnNumbers.renumberedTurns ?? 0
   return success(request.mode === 'cut'
     ? `已删除第 ${target.turn} 轮及之后的对话，新会话 ${request.sessionId} 已创建。`
     : `已删除第 ${target.turn} 轮，后面的对话已保留到新会话 ${request.sessionId}${renumbered > 0 ? `（后续轮次编号前移，共 ${renumbered} 轮）` : ''}。`)
@@ -170,6 +180,23 @@ function findTurn(events, seq) {
 }
 
 /**
+ * Build the fork seed for a truncating delete.
+ * @param events - complete source log.
+ * @param boundary - inclusive last kept seq; the prefix ends at a closed point.
+ * @returns the copied prefix plus its inherited cut marker.
+ */
+function buildForkPrefix(events, boundary) {
+  const prefix = events.slice(0, boundary + 1).map(event => structuredClone(event))
+  prefix.push({
+    type: 'session/end-seed',
+    seq: boundary + 1,
+    time: events[boundary].time,
+    data: { inherited: true },
+  })
+  return prefix
+}
+
+/**
  * Prepare a replay history and store it through the persistence backend.
  *
  * `ctx.sessions.create` only builds an in-memory Session; a durable handle is
@@ -182,14 +209,17 @@ function findTurn(events, seq) {
  * @param session - live source Session.
  * @param sessionId - caller-chosen id for the new Session.
  * @param seed - contiguous replay history.
+ * @param options - fork lineage for a truncating delete.
  */
-async function persist(ctx, persistence, session, sessionId, seed) {
+async function persist(ctx, persistence, session, sessionId, seed, options = {}) {
   const header = session.header
   const prepared = ctx.sessions.prepare(sessionId, {
     seed,
+    ...options.seeded === true ? { inheritedEventCount: options.inheritedEventCount } : {},
     meta: {
       ...header.cwd === undefined ? {} : { cwd: header.cwd },
       ...header.agentPreset === undefined ? {} : { agentPreset: header.agentPreset },
+      ...options.seeded === true ? { isSeeded: true } : {},
     },
   })
   let handle
