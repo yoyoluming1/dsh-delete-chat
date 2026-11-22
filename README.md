@@ -83,16 +83,18 @@ DSH format change may need a plugin update.
 
 ## Publishing
 
-`scripts/publish.sh` creates the GitHub repository, rewrites the placeholder
-commit author, points `package.json`/`README.md` at the real URL and pushes:
+`scripts/publish.sh` handles both publication paths:
 
 ```sh
-GH_OWNER=you GH_TOKEN=... GIT_NAME='Your Name' GIT_EMAIL=you@example.com \
-  ./scripts/publish.sh
+# SSH: create an empty public repository on GitHub first, then
+GH_OWNER=you ./scripts/publish.sh
+
+# Token: the script also creates the repository, then pushes over HTTPS
+GH_OWNER=you GH_TOKEN=... ./scripts/publish.sh
 ```
 
-The token is sent through a per-command HTTP header and is never written into
-`.git/config` or the repository URL.
+In token mode the token is sent through a per-command HTTP header and is never
+written into `.git/config` or the repository URL.
 
 ## Development
 
