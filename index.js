@@ -31,7 +31,7 @@ const COMMAND = 'delete-chat'
 const SESSION_ID = /^session-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** Injectable Host services; without them the plugin stays inactive. */
-export const inject = ['commands', 'sessions']
+export const inject = ['agents', 'commands', 'sessions']
 
 /**
  * Register the delete command.
@@ -74,10 +74,6 @@ async function run(ctx, agent, rawInput) {
 
   if (ctx.sessions.get(request.sessionId) !== undefined) {
     return failure('目标会话 id 已存在，请重试。/ That new session id already exists; try again.')
-  }
-
-  if (ctx.get('agents') === undefined || ctx.get('sessions') === undefined) {
-    return failure('没有加载 Agent 运行时，无法创建新会话。/ The Agent runtime is not loaded.')
   }
 
   let seed
