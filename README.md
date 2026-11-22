@@ -75,6 +75,19 @@ the source conversation.
 - The command is refused while the conversation still has an open (running) turn.
 - Titles that cite a deleted message are dropped with it.
 
+## Publishing
+
+`scripts/publish.sh` creates the GitHub repository, rewrites the placeholder
+commit author, points `package.json`/`README.md` at the real URL and pushes:
+
+```sh
+GH_OWNER=you GH_TOKEN=... GIT_NAME='Your Name' GIT_EMAIL=you@example.com \
+  ./scripts/publish.sh
+```
+
+The token is sent through a per-command HTTP header and is never written into
+`.git/config` or the repository URL.
+
 ## Development
 
 The plugin is plain JavaScript: `index.js` (Host) and `client.js` (browser module).
