@@ -1,6 +1,6 @@
 {
   "name": "dsh-delete-chat",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Delete a turn from a DeepSeek Harness conversation — e.g. after sending a message to the wrong conversation. Truncate from that turn, or keep the later turns in a new session.",
   "type": "module",
   "license": "MIT",

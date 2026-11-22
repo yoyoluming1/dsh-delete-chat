@@ -14,6 +14,10 @@ const zh = {
   opened: '已创建新会话',
   unavailable: 'Host 插件未启用，删除命令不可用。',
   created: '新会话已创建（{id}），但会话列表还没刷新出来；刷新页面后可以在列表里打开它。',
+  settingsLabel: '删除对话按钮',
+  settingsHint: '在每一轮回复下显示「删除对话」。关闭后按钮隐藏，避免误操作；随时可以在这里重新打开。',
+  settingsOn: '已开启',
+  settingsOff: '已关闭',
 }
 
 const en = {
@@ -28,6 +32,10 @@ const en = {
   opened: 'New conversation created',
   unavailable: 'The Host plugin is not active, so the delete command is unavailable.',
   created: 'The new conversation was created ({id}) but has not reached the list yet; reload the page and open it from there.',
+  settingsLabel: 'Delete control',
+  settingsHint: 'Show the delete control under each completed turn. Turn it off to hide the button and avoid accidental deletes.',
+  settingsOn: 'On',
+  settingsOff: 'Off',
 }
 
 window.__ModuleLoader__.load({
@@ -129,6 +137,104 @@ window.__ModuleLoader__.load({
       }, children)
     }
 
+    /**
+     * Whether the per-turn control is shown. Stored per browser so the plugin
+     * can be switched off when it is not needed, without disabling the whole
+     * plugin (which needs a restart to bring the client module back).
+     */
+    const PREFERENCE = 'dsh-delete-chat:enabled'
+    let enabled = readPreference()
+    const preferenceListeners = new Set()
+
+    /** Read the stored preference, defaulting to on. */
+    function readPreference() {
+      try {
+        if (typeof localStorage === 'undefined') return true
+        return localStorage.getItem(PREFERENCE) !== '0'
+      } catch {
+        return true
+      }
+    }
+
+    /** Persist and publish the preference. */
+    function writePreference(next) {
+      enabled = next
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem(PREFERENCE, next ? '1' : '0')
+      } catch {
+        // A blocked storage area only loses persistence for this page.
+      }
+      for (const listener of preferenceListeners) listener()
+    }
+
+    /** Subscribe one component to the preference. */
+    function useEnabled() {
+      const [, bump] = React.useState(0)
+      React.useEffect(() => {
+        const listener = () => bump(value => value + 1)
+        preferenceListeners.add(listener)
+        return () => preferenceListeners.delete(listener)
+      }, [])
+      return enabled
+    }
+
+    /** Host-styled switch for the settings row. */
+    function Toggle({ checked, onChange }) {
+      return h('button', {
+        type: 'button',
+        role: 'switch',
+        'aria-checked': checked,
+        onClick: () => onChange(!checked),
+        style: {
+          appearance: 'none',
+          position: 'relative',
+          width: '36px',
+          height: '20px',
+          borderRadius: '999px',
+          border: '1px solid var(--dsw-alias-border-l2, rgba(127,127,127,.4))',
+          background: checked ? 'var(--dsw-alias-brand-primary, #1d6fe8)' : 'var(--dsw-alias-bg-layer-2, rgba(127,127,127,.25))',
+          cursor: 'pointer',
+          padding: 0,
+          flex: '0 0 auto',
+        },
+      }, h('span', {
+        'aria-hidden': true,
+        style: {
+          position: 'absolute',
+          top: '2px',
+          left: checked ? '18px' : '2px',
+          width: '14px',
+          height: '14px',
+          borderRadius: '50%',
+          background: 'var(--dsw-alias-label-primary-inverted, #fff)',
+          transition: 'left 120ms ease',
+          display: 'block',
+        },
+      }))
+    }
+
+    /** One preference row in Settings → General. */
+    function DeletePreferenceRow({ t }) {
+      const on = useEnabled()
+      return h('div', {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+          padding: '10px 0',
+        },
+      },
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 } },
+        h('div', { style: { fontSize: '13px', color: 'var(--dsw-alias-label-primary, inherit)' } }, t('settingsLabel')),
+        h('div', { style: { fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-tertiary, inherit)' } }, t('settingsHint')),
+      ),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: '0 0 auto' } },
+        h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary, inherit)' } }, t(on ? 'settingsOn' : 'settingsOff')),
+        h(Toggle, { checked: on, onChange: writePreference }),
+      ))
+    }
+
     return {
       inject: ['slots', 'locale', 'remote', 'remote.commands', 'sessions', 'uiWorkspace'],
       apply(ctx) {
@@ -136,6 +242,7 @@ window.__ModuleLoader__.load({
 
         /** The per-turn control; the panel expands in the turn's own flow. */
         function TurnDelete({ seq, sessionId, t }) {
+          const visible = useEnabled()
           const [open, setOpen] = React.useState(false)
           const [busy, setBusy] = React.useState(false)
           const [error, setError] = React.useState(null)
@@ -157,6 +264,7 @@ window.__ModuleLoader__.load({
               setBusy(false)
             }
           }
+          if (!visible) return null
           return h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start' } },
             h('button', {
               type: 'button',
@@ -220,6 +328,13 @@ window.__ModuleLoader__.load({
           order: 900,
           locale: NS,
         }, TurnDelete))
+
+        ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+          name: 'settings.general.item',
+          id: 'delete-chat',
+          order: 50,
+          locale: NS,
+        }, DeletePreferenceRow))
       },
     }
   },

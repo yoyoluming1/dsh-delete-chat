@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- Settings → General gains a **Delete control** switch. Turning it off hides the
+  per-turn button so the feature cannot be triggered by accident; the preference
+  is stored in the browser.
+
 ## 0.1.1
 
 - Create the derived conversation through the agent factory and attach it to the

@@ -25,6 +25,7 @@ function loadModule() {
   const React = {
     createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }),
     useState: initial => [initial, () => {}],
+    useEffect: effect => { const cleanup = effect(); return cleanup },
   }
   return factory(name => {
     if (name === 'react') return React
@@ -36,14 +37,14 @@ const module = loadModule()
 assert.ok(Array.isArray(module.inject), 'declares injected services')
 assert.equal(typeof module.apply, 'function', 'exports apply')
 
-let registration = null
+const registrations = []
 const calls = []
 const ctx = {
   effect: (run) => { calls.push(['effect']); return run() },
   locale: { register: (namespace, dictionaries) => { calls.push(['locale', namespace, Object.keys(dictionaries)]); return () => {} } },
   slots: {
     inject: (name, install) => { calls.push(['inject', name]); return install() },
-    register: (options, component) => { registration = { options, component }; return () => {} },
+    register: (options, component) => { registrations.push({ options, component }); return () => {} },
   },
   remote: { commands: { execute: async () => ({ ok: true, value: { kind: 'success' } }) } },
   sessions: { list: { getSnapshot: () => ({ byId: {} }) } },
@@ -51,13 +52,18 @@ const ctx = {
 }
 
 module.apply(ctx)
-assert.ok(registration, 'registers one slot entry')
-assert.equal(registration.options.name, 'conversation.chat.turnTail')
-assert.equal(registration.options.locale, 'deleteChat')
+assert.equal(registrations.length, 2, 'registers the turn control and the settings row')
+const tail = registrations.find(entry => entry.options.name === 'conversation.chat.turnTail')
+const settings = registrations.find(entry => entry.options.name === 'settings.general.item')
+assert.ok(tail, 'registers the per-turn entry')
+assert.ok(settings, 'registers the General settings row')
+assert.equal(tail.options.locale, 'deleteChat')
 assert.deepEqual(calls.find(entry => entry[0] === 'locale')?.slice(1), ['deleteChat', ['zh', 'en']])
 
-const tree = registration.component({ seq: 42, sessionId: 'session-test', t: key => key })
+const tree = tail.component({ seq: 42, sessionId: 'session-test', t: key => key })
 assert.equal(tree.type, 'div', 'component renders a container')
 assert.equal(tree.children[0].type, 'button', 'component renders the delete control')
+const row = settings.component({ t: key => key })
+assert.equal(row.type, 'div', 'settings row renders')
 
 console.log('client module checks passed')

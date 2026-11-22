@@ -39,6 +39,12 @@ when the mistake sits in the middle and the later turns are still worth keeping.
 After updating the plugin source, reload the page; replacing an installed package
 may require restarting DSH.
 
+### Turn the control off when you do not need it
+
+**Settings → General → Delete control** has a switch. Turning it off hides the
+per-turn button, so an accidental click cannot delete anything; turn it back on
+when you need the feature. The preference is stored in this browser.
+
 ### The Delete control is missing
 
 Client modules register at page load. Reload the page first; if the control is
