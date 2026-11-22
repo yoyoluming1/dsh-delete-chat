@@ -80,7 +80,8 @@ the source conversation.
 The plugin is plain JavaScript: `index.js` (Host) and `client.js` (browser module).
 
 ```sh
-node test/remap-unit.test.mjs    # turn discovery, splice handling, deletion ranges
+node test/remap-unit.test.mjs      # turn discovery, splice handling, deletion ranges
+node test/client-module.test.mjs   # client module loads and registers its slot
 ```
 
 The end-to-end replay test runs against a local, decoded copy of a real session
