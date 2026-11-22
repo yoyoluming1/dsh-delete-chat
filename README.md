@@ -56,6 +56,12 @@ compaction ranges, title message references, image offload targets, command
 sources). The original log is never modified, so a failed deletion cannot corrupt
 the source conversation.
 
+## Compatibility
+
+Tested with DeepSeek Harness `0.2.2-rc.5` (Session format v4). The rebuild relies
+on v4 event envelopes and the persistence backend's strict reader, so a future
+DSH format change may need a plugin update.
+
 ## Limitations
 
 - Deletion works on **whole turns**. Deletion of a single message or tool call is
