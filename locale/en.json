@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Delete chat segment",
+    "description": "Delete one turn of a conversation. Keep the later turns in a new session, or drop everything after that turn.",
+    "detail": "docs/DETAIL.md"
+  }
+}

@@ -1,0 +1,88 @@
+# dsh-delete-chat
+
+Delete part of a conversation in [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH).
+
+DSH Session logs are append-only: nothing can be erased in place. This plugin gives
+you the two deletions that are actually possible on top of the public Session API,
+and performs them by deriving a **new Session** from the part of the log you keep.
+The original Session stays in your list untouched.
+
+| Action | Result |
+| --- | --- |
+| **Delete this turn only** | A new Session keeps every turn before *and* after the deleted turn. |
+| **Delete this turn and everything after** | A new Session keeps only the turns before the deleted turn. |
+
+## Install
+
+1. Clone this repository anywhere:
+
+   ```sh
+   git clone https://github.com/REPLACE_ME/dsh-delete-chat.git
+   ```
+
+2. In DSH open **Plugins → Add plugin**, choose the cloned directory, then
+   **Enable now**.
+3. Open or create a conversation and send at least one message so a completed
+   turn exists. A **删除对话 / Delete** control appears under each completed turn.
+
+After updating the plugin source, reload the page; replacing an installed package
+may require restarting DSH.
+
+## Use
+
+Hover the last assistant reply of a turn, click **删除对话**, then pick:
+
+- **只删除这一轮，保留后面的对话** — removes this turn and carries the later
+  turns into a brand-new conversation.
+- **删除这一轮及之后的所有对话** — keeps the conversation up to just before this
+  turn and drops the rest.
+
+The new conversation opens automatically. The old one stays in the conversation
+list (archive it from the list's context menu if you do not need it).
+
+## How it works
+
+The plugin registers one Host command, `delete-chat`, and a per-turn Chat control
+that calls it through `ctx.remote.commands.execute`. The Host rebuilds the event
+log without the deleted turn, then writes it as a **new** Session through the
+persistence backend (the same path the agent loop uses) and reopens it once to
+validate the stored log.
+
+The rebuild renumbers event seqs, renumbers later turns (the strict v4 reader
+requires `turn/start` to open 1, 2, 3, …), rewrites the DeepSeek delivery
+marker's Session id, drops the inbox splice that queued the deleted prompt, and
+remaps every Session-seq reference (`surfaceOp`, `sourceEventSeqs`, `headerSeq`,
+compaction ranges, title message references, image offload targets, command
+sources). The original log is never modified, so a failed deletion cannot corrupt
+the source conversation.
+
+## Limitations
+
+- Deletion works on **whole turns**. Deletion of a single message or tool call is
+  not offered.
+- `keep-later` **refuses** a turn that a later `system/message` replacement or a
+  live compaction transaction still references. Dropping such a reference would
+  silently resurrect replaced or compacted history; use *delete this turn and
+  everything after* instead.
+- Sessions that are themselves forks (`isSeeded`) are refused by both modes: their
+  inherited-cut marker cannot be carried into a rebuilt log safely.
+- The new conversation gets a new Session id; the old one keeps its id and log.
+- After a middle deletion, later turn numbers shift down by one (turn 351 becomes
+  350). This is required by the on-disk format.
+- The command is refused while the conversation still has an open (running) turn.
+- Titles that cite a deleted message are dropped with it.
+
+## Development
+
+The plugin is plain JavaScript: `index.js` (Host) and `client.js` (browser module).
+
+```sh
+node test/remap-unit.test.mjs    # turn discovery, splice handling, deletion ranges
+```
+
+The end-to-end replay test runs against a local, decoded copy of a real session
+log and is intentionally not published (it contains private conversation text).
+
+## License
+
+MIT

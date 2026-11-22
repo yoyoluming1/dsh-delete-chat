@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Delete chat segment">
+  <rect width="64" height="64" rx="14" fill="#1D6FE8"/>
+  <path d="M13 15h30a8 8 0 0 1 8 8v14a8 8 0 0 1-8 8H25l-9 7v-7h-3a8 8 0 0 1-8-8V23a8 8 0 0 1 8-8Z" fill="#FFFFFF"/>
+  <circle cx="20" cy="30" r="2.6" fill="#1D6FE8"/>
+  <circle cx="29" cy="30" r="2.6" fill="#1D6FE8"/>
+  <circle cx="38" cy="30" r="2.6" fill="#1D6FE8"/>
+  <g stroke="#FFD166" stroke-width="3.2" stroke-linecap="round">
+    <path d="M57 22 47 44"/>
+    <path d="M45 22 55 44"/>
+  </g>
+  <g fill="none" stroke="#FFFFFF" stroke-width="3">
+    <circle cx="44" cy="20" r="4"/>
+    <circle cx="58" cy="20" r="4"/>
+  </g>
+</svg>
