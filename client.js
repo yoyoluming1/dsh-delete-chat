@@ -5,7 +5,7 @@ const NS = 'deleteChat'
 const zh = {
   button: '删除对话',
   title: '删除这段对话',
-  hint: '删除会新建一个会话：原来的会话保留在列表里，可以从新会话继续。',
+  hint: '删除会新建一个删减后的会话；原会话保持不变，仍然显示全部内容，方便对照或反悔。',
   onlyTurn: '只删除这一轮，保留后面的对话',
   cutAll: '删除这一轮及之后的所有对话',
   cancel: '取消',
@@ -19,7 +19,7 @@ const zh = {
 const en = {
   button: 'Delete',
   title: 'Delete this part of the conversation',
-  hint: 'Deleting creates a new conversation. The original stays in the list; continue in the new one.',
+  hint: 'Deleting creates a trimmed copy. The original stays unchanged and still shows everything, so you can compare or go back.',
   onlyTurn: 'Delete this turn only, keep later turns',
   cutAll: 'Delete this turn and everything after',
   cancel: 'Cancel',
