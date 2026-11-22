@@ -5,7 +5,7 @@ const NS = 'deleteChat'
 const zh = {
   button: '删除对话',
   title: '删除这段对话',
-  hint: '删除会新建一个删减后的会话；原会话保持不变，仍然显示全部内容，方便对照或反悔。',
+  hint: '删除会新建一个删减后的会话，并把原会话自动归档（可在归档里取消归档恢复）。',
   onlyTurn: '只删除这一轮，保留后面的对话',
   cutAll: '删除这一轮及之后的所有对话',
   cancel: '取消',
@@ -19,7 +19,7 @@ const zh = {
 const en = {
   button: 'Delete',
   title: 'Delete this part of the conversation',
-  hint: 'Deleting creates a trimmed copy. The original stays unchanged and still shows everything, so you can compare or go back.',
+  hint: 'Deleting creates a trimmed copy and archives the original; unarchive it later to compare or go back.',
   onlyTurn: 'Delete this turn only, keep later turns',
   cutAll: 'Delete this turn and everything after',
   cancel: 'Cancel',
@@ -53,6 +53,13 @@ window.__ModuleLoader__.load({
       await refreshSessions(ctx)
       if (await waitForSession(ctx, newId)) {
         ctx.uiWorkspace.openSession(newId)
+        // The trimmed conversation replaces the source in the list; the source
+        // stays recoverable through "unarchive".
+        try {
+          await ctx.uiWorkspace.archiveSession(sessionId, { stopActivity: true })
+        } catch {
+          // Archiving is a convenience; a failure must not undo the deletion.
+        }
         return { id: newId, opened: true }
       }
       return { id: newId, opened: false }

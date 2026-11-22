@@ -43,8 +43,9 @@ Hover the last assistant reply of a turn, click **删除对话**, then pick:
 - **删除这一轮及之后的所有对话** — keeps the conversation up to just before this
   turn and drops the rest.
 
-The new conversation opens automatically. The old one stays in the conversation
-list (archive it from the list's context menu if you do not need it).
+The new conversation opens automatically and the source conversation is
+archived, so the list shows one conversation instead of two look-alikes.
+Unarchive the source from the archived section to compare or go back.
 
 ## How it works
 

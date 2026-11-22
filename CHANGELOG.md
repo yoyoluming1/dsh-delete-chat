@@ -14,3 +14,5 @@
   before reporting success.
 - The derived conversation gets an incremented title, so the untouched source
   cannot be mistaken for the deletion coming back.
+- The source conversation is archived automatically after a successful delete;
+  unarchive it to compare or undo.
