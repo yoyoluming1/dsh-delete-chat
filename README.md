@@ -80,7 +80,9 @@ DSH format change may need a plugin update.
   conversation*, or by a previous truncation) can still be **truncated**, but
   `keep-later` is refused on that lineage: its inherited-cut marker cannot be
   carried into a rebuilt log safely.
-- The new conversation gets a new Session id; the old one keeps its id and log.
+- The new conversation gets a new Session id and a numbered title (`Title (1)`,
+  matching the built-in branch convention); the old one keeps its id, title and
+  log.
 - Truncation produces a forked Session: the kept prefix is marked as inherited.
   You can truncate that result again, but middle deletion stays unavailable on
   that lineage.

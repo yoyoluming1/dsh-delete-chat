@@ -12,3 +12,5 @@
   transaction still references, and refuses forked sessions.
 - Writes the rebuilt log through the persistence backend and reopens it once
   before reporting success.
+- The derived conversation gets an incremented title, so the untouched source
+  cannot be mistaken for the deletion coming back.

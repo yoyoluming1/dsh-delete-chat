@@ -113,6 +113,8 @@ async function run(ctx, agent, rawInput) {
     throw error
   }
 
+  seed = withForkTitle(seed, events)
+
   try {
     await persist(ctx, persistence, session, request.sessionId, seed, { seeded, inheritedEventCount })
     await verifyStored(persistence, request.sessionId)
@@ -177,6 +179,45 @@ function findTurn(events, seq) {
     if (seq >= turn.startSeq && seq <= turn.endSeq) return turn
   }
   return undefined
+}
+
+/**
+ * Give the derived conversation a distinct title.
+ *
+ * A derived Session inherits the source title, so the list would show two
+ * identically named conversations and the untouched source looks like the
+ * deletion "came back". The built-in branch action uses the same convention:
+ * append or increment a trailing fork number.
+ * @param seed - replay or fork seed to extend.
+ * @param events - source log used to read the current title.
+ * @returns the seed with one appended title event.
+ */
+function withForkTitle(seed, events) {
+  let title
+  for (const event of events) {
+    if (event.type === 'session/title' && typeof event.data?.title === 'string') title = event.data.title
+  }
+  if (title === undefined || title === '') return seed
+  seed.push({
+    type: 'session/title',
+    seq: seed.length,
+    time: Date.now(),
+    data: { title: incrementedTitle(title), messageSeqs: [], source: { kind: 'user' } },
+  })
+  return seed
+}
+
+/**
+ * Increment a trailing fork number, mirroring the built-in branch action.
+ * @param title - current title.
+ * @returns the next numbered title.
+ */
+function incrementedTitle(title) {
+  const ascii = /^(.*?)\((\d+)\)$/u.exec(title)
+  if (ascii?.[1] !== undefined && ascii[2] !== undefined) return `${ascii[1]}(${BigInt(ascii[2]) + 1n})`
+  const fullWidth = /^(.*?)（(\d+)）$/u.exec(title)
+  if (fullWidth?.[1] !== undefined && fullWidth[2] !== undefined) return `${fullWidth[1]}（${BigInt(fullWidth[2]) + 1n}）`
+  return `${title} (1)`
 }
 
 /**
