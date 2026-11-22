@@ -28,6 +28,12 @@ The original Session stays in your list untouched.
 After updating the plugin source, reload the page; replacing an installed package
 may require restarting DSH.
 
+### The Delete control is missing
+
+Client modules register at page load. Reload the page first; if the control is
+still absent after enabling the plugin, restart DSH (a session keeps its log, so
+nothing is lost).
+
 ## Use
 
 Hover the last assistant reply of a turn, click **删除对话**, then pick:
