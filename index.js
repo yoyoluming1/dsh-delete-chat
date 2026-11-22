@@ -263,6 +263,13 @@ async function launch(ctx, source, sessionId, seed, options = {}) {
       setup: async agentCtx => { await presets.mount(agentCtx, preset) },
     },
   })
+  // The workspace browser lists Sessions through workspace membership, not the
+  // working directory alone. The API controller attaches every Session it
+  // creates (and every fork it publishes); a Session created straight through
+  // the agent factory must do the same or it never reaches the sidebar.
+  const workspace = ctx.get('workspaceRegistry')?.list?.()
+    ?.find(candidate => candidate.sessionIds?.includes(source.id))
+  if (workspace !== undefined) await workspace.attachSession(sessionId)
 }
 
 /**
