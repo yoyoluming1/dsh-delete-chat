@@ -17,7 +17,7 @@ The original Session stays in your list untouched.
 1. Clone this repository anywhere:
 
    ```sh
-   git clone https://github.com/REPLACE_ME/dsh-delete-chat.git
+   git clone https://github.com/yoyoluming1/dsh-delete-chat.git
    ```
 
 2. In DSH open **Plugins → Add plugin**, choose the cloned directory, then
