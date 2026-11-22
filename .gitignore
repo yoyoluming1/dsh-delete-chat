@@ -8,3 +8,6 @@ test/verify.mjs
 test/verify-cut.mjs
 test/decode-session.mjs
 test/README.md
+
+# Local GitHub token drop (never commit)
+.token
