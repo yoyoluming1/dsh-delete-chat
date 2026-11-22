@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Delete chat segment",
-    "description": "Delete one turn of a conversation. Keep the later turns in a new session, or drop everything after that turn.",
+    "description": "Delete one turn of a conversation — for example after sending a message to the wrong conversation. Truncate from that turn, or keep the later turns in a new session. The source conversation is archived automatically.",
     "detail": "docs/DETAIL.md"
   }
 }

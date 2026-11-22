@@ -6,9 +6,15 @@ of a **new** Session that keeps the surrounding conversation:
 - **Delete this turn only** keeps the turns before and after it.
 - **Delete this turn and everything after** keeps only the earlier turns.
 
+This is the tool for a message sent to the **wrong conversation**: cut from the
+turn where the mistake started and continue in the trimmed conversation — the
+earlier context is kept, the stray turn is gone from the model history, and the
+source conversation is archived (unarchive it to go back).
+
 The original conversation is never modified: DSH Session logs are append-only, so
-the plugin derives a new Session from a rebuilt event log, writes it through the
-persistence backend, and reopens it once to prove the stored log is readable.
+the plugin derives a new Session from the kept events and creates it through the
+agent factory — persistence write, store entry, announcement, projection
+checkpoint, an idle Agent and workspace attachment.
 
 ## Where it appears
 
