@@ -76,9 +76,8 @@ async function run(ctx, agent, rawInput) {
     return failure('目标会话 id 已存在，请重试。/ That new session id already exists; try again.')
   }
 
-  const persistence = ctx.get('sessionPersistence')
-  if (persistence === undefined) {
-    return failure('没有加载会话持久化后端，无法创建新会话。/ No session persistence backend is loaded.')
+  if (ctx.get('agents') === undefined || ctx.get('sessions') === undefined) {
+    return failure('没有加载 Agent 运行时，无法创建新会话。/ The Agent runtime is not loaded.')
   }
 
   let seed
@@ -116,8 +115,7 @@ async function run(ctx, agent, rawInput) {
   seed = withForkTitle(seed, events)
 
   try {
-    await persist(ctx, persistence, session, request.sessionId, seed, { seeded, inheritedEventCount })
-    await verifyStored(persistence, request.sessionId)
+    await launch(ctx, session, request.sessionId, seed, { seeded, inheritedEventCount })
   } catch (error) {
     return failure(describe(error))
   }
@@ -238,57 +236,37 @@ function buildForkPrefix(events, boundary) {
 }
 
 /**
- * Prepare a replay history and store it through the persistence backend.
+ * Create the derived conversation as a live Agent Session.
  *
- * `ctx.sessions.create` only builds an in-memory Session; a durable handle is
- * opened by the agent loop when it creates or resumes an agent. A plugin must
- * therefore write the replay history through the backend itself, exactly like
- * `agentLoop.createStoredSession` + `appendUnstoredSuffix`, and leave the
- * Session unpublished so the client resumes it from disk by id.
+ * A bare persisted log stays invisible to the client list and has no projection
+ * cache, so the row would miss its title and `retain()` would reject it. The
+ * agent factory performs the whole creation transaction the fork action uses:
+ * backend write, SessionStore entry, announcement, projection checkpoint and a
+ * live Agent the API controller reuses for later prompts.
  * @param ctx - Host context.
- * @param persistence - mounted `sessionPersistence` service.
- * @param session - live source Session.
+ * @param source - live source Session.
  * @param sessionId - caller-chosen id for the new Session.
- * @param seed - contiguous replay history.
+ * @param seed - contiguous replay or fork history.
  * @param options - fork lineage for a truncating delete.
  */
-async function persist(ctx, persistence, session, sessionId, seed, options = {}) {
-  const header = session.header
-  const prepared = ctx.sessions.prepare(sessionId, {
+async function launch(ctx, source, sessionId, seed, options = {}) {
+  const presets = ctx.get('agentPresets')
+  const preset = presets?.presetForSession?.(source) ?? source.header.agentPreset
+  const selection = ctx.get('agentDefaultModel')?.currentSelection?.()
+  await ctx.agents.create({
+    sessionId,
     seed,
     ...options.seeded === true ? { inheritedEventCount: options.inheritedEventCount } : {},
     meta: {
-      ...header.cwd === undefined ? {} : { cwd: header.cwd },
-      ...header.agentPreset === undefined ? {} : { agentPreset: header.agentPreset },
+      ...source.header.cwd === undefined ? {} : { cwd: source.header.cwd },
       ...options.seeded === true ? { isSeeded: true } : {},
+      ...preset === undefined ? {} : { agentPreset: preset },
+    },
+    ...selection === undefined ? {} : { agentOptions: { provider: selection.provider, model: selection.model } },
+    ...preset === undefined || presets === undefined ? {} : {
+      setup: async agentCtx => { await presets.mount(agentCtx, preset) },
     },
   })
-  let handle
-  try {
-    handle = await persistence.create(prepared.header, { inheritedEventCount: prepared.inheritedEventCount })
-    await handle.append(prepared.snapshotEvents())
-    await handle.flush()
-  } finally {
-    await handle?.close().catch(() => {})
-  }
-}
-
-/**
- * Reopen the new log through the strict persistence reader.
- * @param persistence - mounted `sessionPersistence` service.
- * @param sessionId - new Session id.
- */
-async function verifyStored(persistence, sessionId) {
-  let handle
-  try {
-    handle = await persistence.open(sessionId, 'read')
-    const snapshot = await handle.read()
-    if (!Array.isArray(snapshot?.events) || snapshot.events.length === 0) {
-      throw new Error('新会话写入后读回为空。/ The new Session read back empty.')
-    }
-  } finally {
-    await handle?.close().catch(() => {})
-  }
 }
 
 /**
