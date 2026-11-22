@@ -99,6 +99,10 @@ async function run(ctx, agent, rawInput) {
     throw error
   }
 
+  if (!rebuilt.events.some(event => event.type === 'turn/start')) {
+    return failure('删除后没有剩余对话内容。/ Nothing would be left after this deletion.')
+  }
+
   try {
     await persist(ctx, persistence, session, request.sessionId, rebuilt.events)
     await verifyStored(persistence, request.sessionId)

@@ -69,6 +69,9 @@ the source conversation.
 - The new conversation gets a new Session id; the old one keeps its id and log.
 - After a middle deletion, later turn numbers shift down by one (turn 351 becomes
   350). This is required by the on-disk format.
+- Truncation removes every record after the cut, including the latest title,
+  command audit rows, background-job rows and delivered cards written after that
+  turn.
 - The command is refused while the conversation still has an open (running) turn.
 - Titles that cite a deleted message are dropped with it.
 
